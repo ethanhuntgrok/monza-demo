@@ -100,7 +100,7 @@
                 <div class="collapse navbar-collapse">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link notification-bell" href="#"><i class="fas fa-bell"></i> <span id="notification-count" class="notification-count">0</span></a>
+                            <a class="nav-link notification-bell" href="#" onclick="showNotifications()"><i class="fas fa-bell"></i> <span id="notification-count" class="notification-count">0</span></a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" id="user-profile">User</a>
@@ -179,7 +179,7 @@
                         </div>
                     </div>
                 </div>
-                <button class="btn btn-primary mt-3" id="submit-btn" onclick="submitNewRequest()"><i class="fas fa-plus"></i> Submit New Request</button>
+                <button class="btn btn-primary mt-3" id="submit-btn" onclick="showSubmitModal()"><i class="fas fa-plus"></i> Submit New Request</button>
             </div>
 
             <!-- Jobs List Section -->
@@ -196,12 +196,12 @@
                     <label class="ms-3">Category:</label>
                     <select id="filter-cat" class="form-select d-inline-block w-auto ms-2" onchange="loadDashboard()">
                         <option value="">All</option>
+                        <option>Mechanical</option>
                         <option>Carpentry</option>
-                        <option>Civil</option>
+                        <option>Paint</option>
                         <option>HVAC</option>
                         <option>Electrical</option>
-                        <option>Mechanical</option>
-                        <option>Paint</option>
+                        <option>Civil</option>
                     </select>
                     <label class="ms-3">Urgency:</label>
                     <select id="filter-urg" class="form-select d-inline-block w-auto ms-2" onchange="loadDashboard()">
@@ -262,7 +262,7 @@
                         <p id="job-desc"></p>
                         <p>Status: <span id="job-status"></span></p>
                         <p>Timeline: <ul id="job-timeline"></ul></p>
-                        <div>Media: [Before Photo/Video] [After Photo/Video] (Offline Sync Available)</div>
+                        <div>Media: <ul id="job-media"></ul> (Offline Sync Available)</div>
                         <div class="mt-3">
                             <h6>Chat History</h6>
                             <div id="chat-history" class="border p-2 mb-2"></div>
@@ -283,6 +283,52 @@
                             <button class="btn btn-secondary" onclick="toggleOffline()">Go Offline / Save Local</button>
                             <button class="btn btn-info" onclick="syncOffline()">Sync Updates</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Request Modal -->
+        <div class="modal fade" id="newRequestModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Submit New Repair Request</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="new-request-form">
+                            <div class="mb-3">
+                                <label for="req-desc" class="form-label">Description</label>
+                                <textarea class="form-control" id="req-desc" rows="3" required placeholder="e.g., Door hinge broken in conference room"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="req-cat" class="form-label">Category</label>
+                                <select class="form-select" id="req-cat" required>
+                                    <option value="">Select Category</option>
+                                    <option>Mechanical</option>
+                                    <option>Carpentry</option>
+                                    <option>Paint</option>
+                                    <option>HVAC</option>
+                                    <option>Electrical</option>
+                                    <option>Civil</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="req-urg" class="form-label">Urgency</label>
+                                <select class="form-select" id="req-urg" required>
+                                    <option value="">Select Urgency</option>
+                                    <option>Low</option>
+                                    <option>Medium</option>
+                                    <option>High</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="req-media" class="form-label">Upload Photos/Videos (optional)</label>
+                                <input type="file" class="form-control" id="req-media" multiple accept="image/*,video/*">
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="submitNewRequestFromModal()">Submit</button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -311,20 +357,21 @@
         let company = '';
         let users = JSON.parse(localStorage.getItem('users')) || [];
         let jobsData = JSON.parse(localStorage.getItem('jobsData')) || [
-            { id: 1, desc: 'Door Hinge Broken', cat: 'Carpentry', urg: 'High', status: 'Completed', client: 'Friesland Campina', timeline: ['Submitted: Aug 10, 2025'], invoice: [{item: 'Labor', cost: 50}, {item: 'Parts', cost: 20}], total: 70 },
-            { id: 2, desc: 'Floor Tile Cracked', cat: 'Civil', urg: 'Medium', status: 'In Progress', client: 'Friesland Campina', timeline: ['Submitted: Aug 13, 2025'], invoice: [], total: 0 },
-            { id: 3, desc: 'HVAC Issue', cat: 'HVAC', urg: 'Low', status: 'Pending', client: 'Other Client', timeline: [], invoice: [], total: 0 },
-            { id: 4, desc: 'Electrical Wiring', cat: 'Electrical', urg: 'High', status: 'Pending', client: 'Friesland Campina', timeline: [], invoice: [], total: 0 },
-            { id: 5, desc: 'Paint Peeling', cat: 'Paint', urg: 'Medium', status: 'Completed', client: 'Other Client', timeline: [], invoice: [{item: 'Paint', cost: 30}], total: 30 },
-            { id: 6, desc: 'Mechanical Fix', cat: 'Mechanical', urg: 'Low', status: 'In Progress', client: 'Friesland Campina', timeline: [], invoice: [], total: 0 },
-            { id: 7, desc: 'Carpet Repair', cat: 'Civil', urg: 'High', status: 'Completed', client: 'Friesland Campina', timeline: [], invoice: [{item: 'Glue', cost: 15}], total: 15 },
-            { id: 8, desc: 'Door Lock', cat: 'Carpentry', urg: 'Medium', status: 'Pending', client: 'Other Client', timeline: [], invoice: [], total: 0 },
-            { id: 9, desc: 'AC Leak', cat: 'HVAC', urg: 'High', status: 'In Progress', client: 'Friesland Campina', timeline: [], invoice: [], total: 0 },
-            { id: 10, desc: 'Light Fixture', cat: 'Electrical', urg: 'Low', status: 'Completed', client: 'Friesland Campina', timeline: [], invoice: [{item: 'Bulb', cost: 10}], total: 10 }
+            { id: 1, desc: 'Door Hinge Broken', cat: 'Carpentry', urg: 'High', status: 'Completed', client: 'Friesland Campina', timeline: ['Submitted: Aug 10, 2025'], invoice: [{item: 'Labor', cost: 50}, {item: 'Parts', cost: 20}], total: 70, media: [] },
+            { id: 2, desc: 'Floor Tile Cracked', cat: 'Civil', urg: 'Medium', status: 'In Progress', client: 'Friesland Campina', timeline: ['Submitted: Aug 13, 2025'], invoice: [], total: 0, media: [] },
+            { id: 3, desc: 'HVAC Issue', cat: 'HVAC', urg: 'Low', status: 'Pending', client: 'Other Client', timeline: [], invoice: [], total: 0, media: [] },
+            { id: 4, desc: 'Electrical Wiring', cat: 'Electrical', urg: 'High', status: 'Pending', client: 'Friesland Campina', timeline: [], invoice: [], total: 0, media: [] },
+            { id: 5, desc: 'Paint Peeling', cat: 'Paint', urg: 'Medium', status: 'Completed', client: 'Other Client', timeline: [], invoice: [{item: 'Paint', cost: 30}], total: 30, media: [] },
+            { id: 6, desc: 'Mechanical Fix', cat: 'Mechanical', urg: 'Low', status: 'In Progress', client: 'Friesland Campina', timeline: [], invoice: [], total: 0, media: [] },
+            { id: 7, desc: 'Carpet Repair', cat: 'Civil', urg: 'High', status: 'Completed', client: 'Friesland Campina', timeline: [], invoice: [{item: 'Glue', cost: 15}], total: 15, media: [] },
+            { id: 8, desc: 'Door Lock', cat: 'Carpentry', urg: 'Medium', status: 'Pending', client: 'Other Client', timeline: [], invoice: [], total: 0, media: [] },
+            { id: 9, desc: 'AC Leak', cat: 'HVAC', urg: 'High', status: 'In Progress', client: 'Friesland Campina', timeline: [], invoice: [], total: 0, media: [] },
+            { id: 10, desc: 'Light Fixture', cat: 'Electrical', urg: 'Low', status: 'Completed', client: 'Friesland Campina', timeline: [], invoice: [{item: 'Bulb', cost: 10}], total: 10, media: [] }
         ];
         let notifications = [];
         let chatHistory = [];
         let offlineUpdates = JSON.parse(localStorage.getItem('offlineUpdates')) || [];
+        let currentJobId = null; // For modals
 
         function showLogin() {
             document.getElementById('register').style.display = 'none';
@@ -454,12 +501,16 @@
         }
 
         function viewJob(id) {
+            currentJobId = id;
             const job = jobsData.find(j => j.id === id);
             document.getElementById('job-desc').innerText = job.desc;
             document.getElementById('job-status').innerText = job.status;
             const timelineList = document.getElementById('job-timeline');
             timelineList.innerHTML = '';
             job.timeline.forEach(t => { timelineList.innerHTML += `<li>${t}</li>`; });
+            const mediaList = document.getElementById('job-media');
+            mediaList.innerHTML = '';
+            job.media.forEach(m => { mediaList.innerHTML += `<li>${m}</li>`; });
             chatHistory = []; // Reset for demo
             updateChat();
             const invoiceTable = document.getElementById('invoice-table');
@@ -495,8 +546,7 @@
 
         function completeJob() {
             if (role !== 'Engineer' && role !== 'Admin') return alert('Only Engineers/Admins can complete jobs.');
-            const jobId = parseInt(document.getElementById('job-desc').parentElement.querySelector('#job-desc').innerText.split(' ')[0] || ''); // Rough parse
-            const job = jobsData.find(j => j.id === jobId);
+            const job = jobsData.find(j => j.id === currentJobId);
             job.status = 'Completed';
             job.timeline.push(`Completed: Aug 14, 2025`);
             job.invoice = [{item: 'Labor', cost: 80}, {item: 'Materials', cost: 20}]; // Fake
@@ -521,16 +571,41 @@
             }
         }
 
-        function submitNewRequest() {
+        function showSubmitModal() {
             if (role !== 'Client') return alert('Only Clients can submit requests.');
-            const newDesc = prompt('Enter repair description:');
-            if (newDesc) {
-                const newJob = { id: jobsData.length + 1, desc: newDesc, cat: 'Civil', urg: 'Medium', status: 'Pending', client: company, timeline: ['Submitted: Aug 13, 2025'], invoice: [], total: 0 };
-                jobsData.push(newJob);
-                alert('New request submitted!');
-                addNotification('New repair request submitted');
-                loadDashboard();
-            }
+            new bootstrap.Modal(document.getElementById('newRequestModal')).show();
+        }
+
+        function submitNewRequestFromModal() {
+            const desc = document.getElementById('req-desc').value;
+            const cat = document.getElementById('req-cat').value;
+            const urg = document.getElementById('req-urg').value;
+            const mediaInput = document.getElementById('req-media');
+            if (!desc || !cat || !urg) return alert('Please fill all required fields.');
+
+            const mediaFiles = Array.from(mediaInput.files).map(f => f.name);
+            const newJob = { 
+                id: jobsData.length + 1, 
+                desc: desc, 
+                cat: cat, 
+                urg: urg, 
+                status: 'Pending', 
+                client: company, 
+                timeline: ['Submitted: Aug 13, 2025'], 
+                invoice: [], 
+                total: 0,
+                media: mediaFiles 
+            };
+            jobsData.push(newJob);
+            bootstrap.Modal.getInstance(document.getElementById('newRequestModal')).hide();
+            alert('New request submitted!');
+            addNotification('New repair request submitted');
+            loadDashboard();
+            // Clear form
+            document.getElementById('req-desc').value = '';
+            document.getElementById('req-cat').value = '';
+            document.getElementById('req-urg').value = '';
+            mediaInput.value = '';
         }
 
         function generateReport() {
@@ -550,17 +625,18 @@
         function addNotification(msg) {
             notifications.push({ msg: msg, time: new Date().toLocaleString() });
             document.getElementById('notification-count').innerText = notifications.length;
+            updateNotificationsList();
+        }
+
+        function updateNotificationsList() {
             const notifyList = document.getElementById('notifications-list');
             notifyList.innerHTML = '';
             notifications.forEach(n => { notifyList.innerHTML += `<li>${n.time}: ${n.msg}</li>`; });
-            // Show modal for demo
-            // new bootstrap.Modal(document.getElementById('notificationsModal')).show();
         }
 
-        // Click bell to show notifications
-        document.querySelector('.notification-bell').addEventListener('click', () => {
+        function showNotifications() {
             new bootstrap.Modal(document.getElementById('notificationsModal')).show();
-        });
+        }
     </script>
 </body>
 </html>
