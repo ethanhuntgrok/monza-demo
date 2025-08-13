@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monza Repair Management App Demo</title>
+    <!-- Bootstrap CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CDN for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Roboto, sans-serif; background: #F4F4F4; color: #333; }
+        .navbar { background: #E4032E; }
+        .sidebar { background: #333; color: white; height: 100vh; position: fixed; width: 250px; padding: 20px; overflow-y: auto; }
+        .sidebar a { color: white; text-decoration: none; display: block; padding: 10px; }
+        .sidebar a:hover { background: #555; }
+        .content { margin-left: 250px; padding: 20px; }
+        .stat-card { border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .red-bg { background: #E74C3C; color: white; }
+        .orange-bg { background: #F39C12; color: white; }
+        .green-bg { background: #27AE60; color: white; }
+        #login, #register { display: block; }
+        #app { display: none; }
+        .notification-bell { position: relative; }
+        .notification-count { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login" class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="text-center">Monza Login</h3>
+                        <form id="login-form">
+                            <div class="mb-3">
+                                <label for="user" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="user" placeholder="e.g., client@monza" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pass" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="pass" required>
+                            </div>
+                            <button type="button" class="btn btn-primary w-100" onclick="login()">Login</button>
+                            <button type="button" class="btn btn-link w-100 mt-2" onclick="showRegister()">Register New User</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Screen (Hidden) -->
+    <div id="register" class="container mt-5" style="display: none;">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="text-center">Register</h3>
+                        <form>
+                            <div class="mb-3">
+                                <label for="reg-user" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="reg-user" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reg-pass" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="reg-pass" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reg-role" class="form-label">Role</label>
+                                <select class="form-control" id="reg-role">
+                                    <option>Client</option>
+                                    <option>Engineer</option>
+                                    <option>Admin</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reg-company" class="form-label">Company (for Clients)</label>
+                                <input type="text" class="form-control" id="reg-company" placeholder="e.g., Friesland Campina">
+                            </div>
+                            <button type="button" class="btn btn-primary w-100" onclick="register()">Register</button>
+                            <button type="button" class="btn btn-link w-100 mt-2" onclick="showLogin()">Back to Login</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (Hidden Initially) -->
+    <div id="app">
+        <!-- Header -->
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">Monza App <i class="fas fa-tools"></i></a>
+                <div class="collapse navbar-collapse">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link notification-bell" href="#"><i class="fas fa-bell"></i> <span id="notification-count" class="notification-count">0</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="user-profile">User</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="logout()">Logout</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h4>Menu</h4>
+            <a href="#" onclick="showSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="#" onclick="showSection('jobs')"><i class="fas fa-tasks"></i> Jobs List</a>
+            <a href="#" onclick="showSection('reports')"><i class="fas fa-chart-bar"></i> Reports</a>
+            <a href="#" onclick="showSection('profile')"><i class="fas fa-user"></i> Profile</a>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content">
+            <!-- Dashboard Section -->
+            <div id="dashboard-section">
+                <h2 id="role-title">Dashboard</h2>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card stat-card red-bg">
+                            <div class="card-body">
+                                <h5><i class="fas fa-exclamation-triangle"></i> Pending Jobs</h5>
+                                <p id="pending-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card orange-bg">
+                            <div class="card-body">
+                                <h5><i class="fas fa-sync-alt"></i> In Progress</h5>
+                                <p id="wip-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card green-bg">
+                            <div class="card-body">
+                                <h5><i class="fas fa-check-circle"></i> Completed</h5>
+                                <p id="completed-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <h5><i class="fas fa-file-invoice-dollar"></i> Pending Invoices</h5>
+                                <p id="invoices-pending">$0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>Jobs by Status</h5>
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>Jobs by Month & Category</h5>
+                                <canvas id="monthChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary mt-3" id="submit-btn" onclick="submitNewRequest()"><i class="fas fa-plus"></i> Submit New Request</button>
+            </div>
+
+            <!-- Jobs List Section -->
+            <div id="jobs-section" style="display: none;">
+                <h2>Jobs List</h2>
+                <div class="mb-3">
+                    <label>Filter by Status:</label>
+                    <select id="filter-status" class="form-select d-inline-block w-auto ms-2" onchange="loadDashboard()">
+                        <option value="">All</option>
+                        <option>Pending</option>
+                        <option>In Progress</option>
+                        <option>Completed</option>
+                    </select>
+                    <label class="ms-3">Category:</label>
+                    <select id="filter-cat" class="form-select d-inline-block w-auto ms-2" onchange="loadDashboard()">
+                        <option value="">All</option>
+                        <option>Carpentry</option>
+                        <option>Civil</option>
+                        <option>HVAC</option>
+                        <option>Electrical</option>
+                        <option>Mechanical</option>
+                        <option>Paint</option>
+                    </select>
+                    <label class="ms-3">Urgency:</label>
+                    <select id="filter-urg" class="form-select d-inline-block w-auto ms-2" onchange="loadDashboard()">
+                        <option value="">All</option>
+                        <option>High</option>
+                        <option>Medium</option>
+                        <option>Low</option>
+                    </select>
+                </div>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Urgency</th>
+                            <th>Status</th>
+                            <th>Client</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobs-table"></tbody>
+                </table>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reports-section" style="display: none;">
+                <h2>Reports</h2>
+                <button class="btn btn-success" onclick="generateReport()"><i class="fas fa-download"></i> Generate Monthly Report</button>
+                <div id="report-output" class="mt-3"></div>
+            </div>
+
+            <!-- Profile Section -->
+            <div id="profile-section" style="display: none;">
+                <h2>Profile</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <h5>User Details</h5>
+                        <p>Username: <span id="profile-user"></span></p>
+                        <p>Role: <span id="profile-role"></span></p>
+                        <p>Company: <span id="profile-company"></span></p>
+                        <h6>Company Users (Multi-User Example)</h6>
+                        <ul id="company-users"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Details Modal -->
+        <div class="modal fade" id="jobModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Job Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="job-desc"></p>
+                        <p>Status: <span id="job-status"></span></p>
+                        <p>Timeline: <ul id="job-timeline"></ul></p>
+                        <div>Media: [Before Photo/Video] [After Photo/Video] (Offline Sync Available)</div>
+                        <div class="mt-3">
+                            <h6>Chat History</h6>
+                            <div id="chat-history" class="border p-2 mb-2"></div>
+                            <input class="form-control" id="chat-input" placeholder="Type message">
+                            <button class="btn btn-primary mt-1" onclick="sendMessage()">Send</button>
+                        </div>
+                        <div class="mt-3">
+                            <h6>Invoice Breakdown</h6>
+                            <table class="table table-sm">
+                                <thead><tr><th>Item</th><th>Cost</th></tr></thead>
+                                <tbody id="invoice-table"></tbody>
+                            </table>
+                            <p>Total: <span id="invoice-total">$0</span> | Status: Pending</p>
+                            <button class="btn btn-success" onclick="payInvoice()">Pay Now</button>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-warning" id="complete-btn" onclick="completeJob()">Complete Job</button>
+                            <button class="btn btn-secondary" onclick="toggleOffline()">Go Offline / Save Local</button>
+                            <button class="btn btn-info" onclick="syncOffline()">Sync Updates</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Modal -->
+        <div class="modal fade" id="notificationsModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Notifications</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul id="notifications-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let role = '';
+        let username = '';
+        let company = '';
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let jobsData = JSON.parse(localStorage.getItem('jobsData')) || [
+            { id: 1, desc: 'Door Hinge Broken', cat: 'Carpentry', urg: 'High', status: 'Completed', client: 'Friesland Campina', timeline: ['Submitted: Aug 10, 2025'], invoice: [{item: 'Labor', cost: 50}, {item: 'Parts', cost: 20}], total: 70 },
+            { id: 2, desc: 'Floor Tile Cracked', cat: 'Civil', urg: 'Medium', status: 'In Progress', client: 'Friesland Campina', timeline: ['Submitted: Aug 13, 2025'], invoice: [], total: 0 },
+            { id: 3, desc: 'HVAC Issue', cat: 'HVAC', urg: 'Low', status: 'Pending', client: 'Other Client', timeline: [], invoice: [], total: 0 },
+            { id: 4, desc: 'Electrical Wiring', cat: 'Electrical', urg: 'High', status: 'Pending', client: 'Friesland Campina', timeline: [], invoice: [], total: 0 },
+            { id: 5, desc: 'Paint Peeling', cat: 'Paint', urg: 'Medium', status: 'Completed', client: 'Other Client', timeline: [], invoice: [{item: 'Paint', cost: 30}], total: 30 },
+            { id: 6, desc: 'Mechanical Fix', cat: 'Mechanical', urg: 'Low', status: 'In Progress', client: 'Friesland Campina', timeline: [], invoice: [], total: 0 },
+            { id: 7, desc: 'Carpet Repair', cat: 'Civil', urg: 'High', status: 'Completed', client: 'Friesland Campina', timeline: [], invoice: [{item: 'Glue', cost: 15}], total: 15 },
+            { id: 8, desc: 'Door Lock', cat: 'Carpentry', urg: 'Medium', status: 'Pending', client: 'Other Client', timeline: [], invoice: [], total: 0 },
+            { id: 9, desc: 'AC Leak', cat: 'HVAC', urg: 'High', status: 'In Progress', client: 'Friesland Campina', timeline: [], invoice: [], total: 0 },
+            { id: 10, desc: 'Light Fixture', cat: 'Electrical', urg: 'Low', status: 'Completed', client: 'Friesland Campina', timeline: [], invoice: [{item: 'Bulb', cost: 10}], total: 10 }
+        ];
+        let notifications = [];
+        let chatHistory = [];
+        let offlineUpdates = JSON.parse(localStorage.getItem('offlineUpdates')) || [];
+
+        function showLogin() {
+            document.getElementById('register').style.display = 'none';
+            document.getElementById('login').style.display = 'block';
+        }
+
+        function showRegister() {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('register').style.display = 'block';
+        }
+
+        function register() {
+            const regUser = document.getElementById('reg-user').value;
+            const regPass = document.getElementById('reg-pass').value;
+            const regRole = document.getElementById('reg-role').value;
+            const regCompany = document.getElementById('reg-company').value;
+            if (users.find(u => u.user === regUser)) return alert('User exists');
+            users.push({ user: regUser, pass: regPass, role: regRole, company: regCompany });
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Registered! Login now.');
+            showLogin();
+        }
+
+        function login() {
+            username = document.getElementById('user').value.toLowerCase();
+            const pass = document.getElementById('pass').value;
+            const userData = users.find(u => u.user === username && u.pass === pass);
+            if (!userData) return alert('Invalid credentials. Register if new.');
+            role = userData.role;
+            company = userData.company;
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('user-profile').innerText = username;
+            loadDashboard();
+            showSection('dashboard');
+            addNotification('Logged in successfully');
+            if (role !== 'Client') document.getElementById('submit-btn').style.display = 'none';
+            if (role !== 'Engineer' && role !== 'Admin') document.getElementById('complete-btn').style.display = 'none';
+        }
+
+        function logout() {
+            role = ''; username = ''; company = '';
+            localStorage.setItem('jobsData', JSON.stringify(jobsData));
+            localStorage.setItem('offlineUpdates', JSON.stringify(offlineUpdates));
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login').style.display = 'block';
+        }
+
+        function showSection(section) {
+            ['dashboard', 'jobs', 'reports', 'profile'].forEach(s => {
+                document.getElementById(`${s}-section`).style.display = section === s ? 'block' : 'none';
+            });
+            if (section === 'profile') loadProfile();
+        }
+
+        function loadDashboard() {
+            let filteredJobs = jobsData;
+            if (role === 'Engineer') filteredJobs = filteredJobs.filter(j => j.status !== 'Completed'); // Assigned only
+            if (role === 'Client') filteredJobs = filteredJobs.filter(j => j.client === company);
+
+            const filterStatus = document.getElementById('filter-status')?.value;
+            const filterCat = document.getElementById('filter-cat')?.value;
+            const filterUrg = document.getElementById('filter-urg')?.value;
+            if (filterStatus) filteredJobs = filteredJobs.filter(j => j.status === filterStatus);
+            if (filterCat) filteredJobs = filteredJobs.filter(j => j.cat === filterCat);
+            if (filterUrg) filteredJobs = filteredJobs.filter(j => j.urg === filterUrg);
+
+            const pending = filteredJobs.filter(j => j.status === 'Pending').length;
+            const wip = filteredJobs.filter(j => j.status === 'In Progress').length;
+            const completed = filteredJobs.filter(j => j.status === 'Completed').length;
+            document.getElementById('pending-count').innerText = pending;
+            document.getElementById('wip-count').innerText = wip;
+            document.getElementById('completed-count').innerText = completed;
+            let pendingInvoices = 0;
+            filteredJobs.forEach(j => { if (j.status === 'Completed' && j.total > 0) pendingInvoices += j.total; });
+            document.getElementById('invoices-pending').innerText = '$' + pendingInvoices;
+
+            // Status Pie Chart
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'pie',
+                data: { labels: ['Pending', 'In Progress', 'Completed'], datasets: [{ data: [pending, wip, completed], backgroundColor: ['#E74C3C', '#F39C12', '#27AE60'] }] },
+                options: { responsive: true }
+            });
+
+            // Month Bar Chart (Fake monthly data, stacked by category)
+            const monthCtx = document.getElementById('monthChart').getContext('2d');
+            new Chart(monthCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        { label: 'Carpentry', data: [2, 1, 3], backgroundColor: '#E4032E' },
+                        { label: 'Civil', data: [1, 2, 1], backgroundColor: '#333' },
+                        { label: 'HVAC', data: [3, 0, 2], backgroundColor: '#27AE60' }
+                    ]
+                },
+                options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
+            });
+
+            // Load Jobs Table
+            const tableBody = document.getElementById('jobs-table');
+            tableBody.innerHTML = '';
+            filteredJobs.forEach(job => {
+                const row = `<tr>
+                    <td>${job.id}</td>
+                    <td>${job.desc}</td>
+                    <td>${job.cat}</td>
+                    <td>${job.urg}</td>
+                    <td>${job.status}</td>
+                    <td>${job.client}</td>
+                    <td><button class="btn btn-sm btn-info" onclick="viewJob(${job.id})"><i class="fas fa-eye"></i> View</button></td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        function loadProfile() {
+            document.getElementById('profile-user').innerText = username;
+            document.getElementById('profile-role').innerText = role;
+            document.getElementById('profile-company').innerText = company || 'N/A';
+            const companyUsersList = document.getElementById('company-users');
+            companyUsersList.innerHTML = '';
+            users.filter(u => u.company === company).forEach(u => {
+                companyUsersList.innerHTML += `<li>${u.user} (${u.role})</li>`;
+            });
+        }
+
+        function viewJob(id) {
+            const job = jobsData.find(j => j.id === id);
+            document.getElementById('job-desc').innerText = job.desc;
+            document.getElementById('job-status').innerText = job.status;
+            const timelineList = document.getElementById('job-timeline');
+            timelineList.innerHTML = '';
+            job.timeline.forEach(t => { timelineList.innerHTML += `<li>${t}</li>`; });
+            chatHistory = []; // Reset for demo
+            updateChat();
+            const invoiceTable = document.getElementById('invoice-table');
+            invoiceTable.innerHTML = '';
+            job.invoice.forEach(i => { invoiceTable.innerHTML += `<tr><td>${i.item}</td><td>$${i.cost}</td></tr>`; });
+            document.getElementById('invoice-total').innerText = '$' + job.total;
+            new bootstrap.Modal(document.getElementById('jobModal')).show();
+            if (role !== 'Client') document.querySelector('#jobModal .btn-success').style.display = 'none'; // Hide pay for non-clients
+        }
+
+        function sendMessage() {
+            const msg = document.getElementById('chat-input').value;
+            if (msg) {
+                chatHistory.push({ sender: username, msg: msg, time: new Date().toLocaleString() });
+                updateChat();
+                document.getElementById('chat-input').value = '';
+                addNotification(`New chat message sent in job`);
+            }
+        }
+
+        function updateChat() {
+            const chatDiv = document.getElementById('chat-history');
+            chatDiv.innerHTML = '';
+            chatHistory.forEach(c => {
+                chatDiv.innerHTML += `<div><strong>${c.sender} (${c.time}):</strong> ${c.msg}</div>`;
+            });
+        }
+
+        function payInvoice() {
+            alert('Payment processed! Invoice paid.');
+            addNotification('Invoice paid for job');
+        }
+
+        function completeJob() {
+            if (role !== 'Engineer' && role !== 'Admin') return alert('Only Engineers/Admins can complete jobs.');
+            const jobId = parseInt(document.getElementById('job-desc').parentElement.querySelector('#job-desc').innerText.split(' ')[0] || ''); // Rough parse
+            const job = jobsData.find(j => j.id === jobId);
+            job.status = 'Completed';
+            job.timeline.push(`Completed: Aug 14, 2025`);
+            job.invoice = [{item: 'Labor', cost: 80}, {item: 'Materials', cost: 20}]; // Fake
+            job.total = 100;
+            alert('Job completed and invoiced!');
+            addNotification(`Job ${job.id} completed`);
+            loadDashboard();
+        }
+
+        function toggleOffline() {
+            alert('Offline mode: Changes saved locally. Use Sync when online.');
+            // Simulate save
+            offlineUpdates.push({ type: 'update', data: 'Sample offline change' });
+        }
+
+        function syncOffline() {
+            if (offlineUpdates.length) {
+                alert(`Synced ${offlineUpdates.length} updates!`);
+                offlineUpdates = [];
+            } else {
+                alert('No offline updates to sync.');
+            }
+        }
+
+        function submitNewRequest() {
+            if (role !== 'Client') return alert('Only Clients can submit requests.');
+            const newDesc = prompt('Enter repair description:');
+            if (newDesc) {
+                const newJob = { id: jobsData.length + 1, desc: newDesc, cat: 'Civil', urg: 'Medium', status: 'Pending', client: company, timeline: ['Submitted: Aug 13, 2025'], invoice: [], total: 0 };
+                jobsData.push(newJob);
+                alert('New request submitted!');
+                addNotification('New repair request submitted');
+                loadDashboard();
+            }
+        }
+
+        function generateReport() {
+            if (role !== 'Admin') return alert('Only Admins can generate reports.');
+            let reportHtml = '<table class="table"><thead><tr><th>Client</th><th>Jobs</th><th>Billed</th></tr></thead><tbody>';
+            const clients = [...new Set(jobsData.map(j => j.client))];
+            clients.forEach(c => {
+                const clientJobs = jobsData.filter(j => j.client === c);
+                const billed = clientJobs.reduce((sum, j) => sum + j.total, 0);
+                reportHtml += `<tr><td>${c}</td><td>${clientJobs.length}</td><td>$${billed} <button class="btn btn-sm btn-success" onclick="alert('Marked paid for ${c}')">Mark Paid</button></td></tr>`;
+            });
+            reportHtml += '</tbody></table>';
+            reportHtml += '<button class="btn btn-info" onclick="alert(\'Exported to CSV!\')">Export CSV</button>';
+            document.getElementById('report-output').innerHTML = reportHtml;
+        }
+
+        function addNotification(msg) {
+            notifications.push({ msg: msg, time: new Date().toLocaleString() });
+            document.getElementById('notification-count').innerText = notifications.length;
+            const notifyList = document.getElementById('notifications-list');
+            notifyList.innerHTML = '';
+            notifications.forEach(n => { notifyList.innerHTML += `<li>${n.time}: ${n.msg}</li>`; });
+            // Show modal for demo
+            // new bootstrap.Modal(document.getElementById('notificationsModal')).show();
+        }
+
+        // Click bell to show notifications
+        document.querySelector('.notification-bell').addEventListener('click', () => {
+            new bootstrap.Modal(document.getElementById('notificationsModal')).show();
+        });
+    </script>
+</body>
+</html>
