@@ -27,6 +27,9 @@
         .notification-count { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; }
         @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .content { margin-left: 0; } }
         button.btn-primary { background: #E4032E; border-color: #E4032E; }
+        .chart-container { height: 250px; width: 100%; } /* Smaller charts */
+        canvas { max-height: 250px; width: 100% !important; }
+        .job-card { margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -167,7 +170,9 @@
                         <div class="card">
                             <div class="card-body">
                                 <h5>Jobs by Status</h5>
-                                <canvas id="statusChart"></canvas>
+                                <div class="chart-container">
+                                    <canvas id="statusChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -175,10 +180,16 @@
                         <div class="card">
                             <div class="card-body">
                                 <h5>Jobs by Month & Category</h5>
-                                <canvas id="monthChart"></canvas>
+                                <div class="chart-container">
+                                    <canvas id="monthChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="mt-4">
+                    <h3>Current Jobs In Progress</h3>
+                    <div id="in-progress-jobs"></div>
                 </div>
                 <button class="btn btn-primary mt-3" id="submit-btn" onclick="showSubmitModal()"><i class="fas fa-plus"></i> Submit New Request</button>
             </div>
@@ -265,8 +276,10 @@
                         <p id="job-desc"></p>
                         <p>Status: <span id="job-status"></span></p>
                         <p>Timeline: <ul id="job-timeline"></ul></p>
-                        <div>Before Media (Client Upload): <ul id="job-media"></ul></div>
-                        <div>After Media (Engineer Upload): <ul id="job-after-media"></ul></div>
+                        <div>Before Media (Client Upload):</div>
+                        <div id="job-media" class="d-flex flex-wrap"></div>
+                        <div>After Media (Engineer Upload):</div>
+                        <div id="job-after-media" class="d-flex flex-wrap"></div>
                         <div class="mt-3">
                             <h6>Chat History</h6>
                             <div id="chat-history" class="border p-2 mb-2"></div>
@@ -442,9 +455,9 @@
             if (role === 'Engineer') filteredJobs = filteredJobs.filter(j => j.status !== 'Completed');
             if (role === 'Client') filteredJobs = filteredJobs.filter(j => j.client === company);
 
-            const filterStatus = document.getElementById('filter-status')?.value || '';
-            const filterCat = document.getElementById('filter-cat')?.value || '';
-            const filterUrg = document.getElementById('filter-urg')?.value || '';
+            const filterStatus = document.getElementById('filter-status') ? document.getElementById('filter-status').value : '';
+            const filterCat = document.getElementById('filter-cat') ? document.getElementById('filter-cat').value : '';
+            const filterUrg = document.getElementById('filter-urg') ? document.getElementById('filter-urg').value : '';
             if (filterStatus) filteredJobs = filteredJobs.filter(j => j.status === filterStatus);
             if (filterCat) filteredJobs = filteredJobs.filter(j => j.cat === filterCat);
             if (filterUrg) filteredJobs = filteredJobs.filter(j => j.urg === filterUrg);
@@ -481,6 +494,25 @@
                 },
                 options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
             });
+
+            // Load In Progress Jobs on Dashboard
+            const inProgressJobsDiv = document.getElementById('in-progress-jobs');
+            inProgressJobsDiv.innerHTML = '';
+            const inProgressJobs = filteredJobs.filter(j => j.status === 'In Progress');
+            if (inProgressJobs.length === 0) {
+                inProgressJobsDiv.innerHTML = '<p>No jobs in progress.</p>';
+            } else {
+                inProgressJobs.forEach(job => {
+                    inProgressJobsDiv.innerHTML += `
+                        <div class="card job-card orange-bg text-white">
+                            <div class="card-body">
+                                <h6>ID: ${job.id} - ${job.cat} (${job.urg})</h6>
+                                <p>${job.desc} (Client: ${job.client})</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
 
             // Load Jobs Table
             const tableBody = document.getElementById('jobs-table');
@@ -520,12 +552,16 @@
             const timelineList = document.getElementById('job-timeline');
             timelineList.innerHTML = '';
             job.timeline.forEach(t => { timelineList.innerHTML += `<li>${t}</li>`; });
-            const mediaList = document.getElementById('job-media');
-            mediaList.innerHTML = '';
-            job.media.forEach(m => { mediaList.innerHTML += `<li>${m}</li>`; });
-            const afterMediaList = document.getElementById('job-after-media');
-            afterMediaList.innerHTML = '';
-            (job.afterMedia || []).forEach(m => { afterMediaList.innerHTML += `<li>${m}</li>`; });
+            const mediaDiv = document.getElementById('job-media');
+            mediaDiv.innerHTML = '';
+            job.media.forEach(m => {
+                mediaDiv.innerHTML += `<img src="${m}" alt="Before Media" style="max-width: 200px; margin: 5px;" onerror="this.src='https://via.placeholder.com/200?text=Media';">`;
+            });
+            const afterMediaDiv = document.getElementById('job-after-media');
+            afterMediaDiv.innerHTML = '';
+            (job.afterMedia || []).forEach(m => {
+                afterMediaDiv.innerHTML += `<img src="${m}" alt="After Media" style="max-width: 200px; margin: 5px;" onerror="this.src='https://via.placeholder.com/200?text=Media';">`;
+            });
             chatHistory = []; // Reset for demo
             updateChat();
             const invoiceTable = document.getElementById('invoice-table');
@@ -634,9 +670,11 @@
             const mediaInput = document.getElementById('after-media-input');
             const newFiles = Array.from(mediaInput.files).map(f => f.name);
             job.afterMedia = (job.afterMedia || []).concat(newFiles);
-            const afterList = document.getElementById('job-after-media');
-            afterList.innerHTML = '';
-            job.afterMedia.forEach(m => { afterList.innerHTML += `<li>${m}</li>`; });
+            const afterDiv = document.getElementById('job-after-media');
+            afterDiv.innerHTML = '';
+            job.afterMedia.forEach(m => {
+                afterDiv.innerHTML += `<img src="${m}" alt="After Media" style="max-width: 200px; margin: 5px;" onerror="this.src='https://via.placeholder.com/200?text=Media';">`;
+            });
             alert('After media uploaded!');
             mediaInput.value = '';
             addNotification('After media added to job');
